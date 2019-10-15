@@ -129,6 +129,14 @@ def handle_is_none(node):
     return f"assert {args[0]} is None{msg_with_comma}"
 
 
+def handle_is_not(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {args[0]} is not {args[1]}{msg_with_comma}"
+
+
 def handle_is_not_none(node):
     args, _, msg_with_comma = parse_args_and_msg(node, 1)
     if len(args) != 1:
@@ -145,6 +153,14 @@ def handle_is_instance(node):
     return f"assert isinstance({args[0]}, {args[1]}){msg_with_comma}"
 
 
+def handle_not_is_instance(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert not isinstance({args[0]}, {args[1]}){msg_with_comma}"
+
+
 assert_mapping = {
     "assertEqual": handle_equal,
     "assertNotEqual": handle_not_equal,
@@ -153,9 +169,11 @@ assert_mapping = {
     "assertIn": handle_in,
     "assertNotIn": handle_not_in,
     "assertIs": handle_is,
+    "assertIsNot": handle_is_not,
     "assertIsNone": handle_is_none,
     "assertIsNotNone": handle_is_not_none,
     "assertIsInstance": handle_is_instance,
+    "assertNotIsInstance": handle_not_is_instance,
 }
 
 
