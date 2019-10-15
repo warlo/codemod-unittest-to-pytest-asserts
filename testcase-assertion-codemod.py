@@ -1,8 +1,14 @@
+#!/usr/bin/env python
+import sys
 import re
 import codemod
 import ast
 import astunparse
 
+
+if sys.version_info[0] != 3 or sys.version_info[1] < 8:
+    print("This script requires Python version >3.8")
+    sys.exit(1)
 
 COMMENT_REGEX = re.compile(r"(\s*).*\)(\s*\#.*)")
 
@@ -166,7 +172,7 @@ def dfs_walk(node):
     """
     stack = [node]
     for child in ast.iter_child_nodes(node):
-        stack.extend(walk(child))
+        stack.extend(dfs_walk(child))
     return stack
 
 
@@ -233,3 +239,4 @@ def is_py(filename):
 
 
 codemod.Query(assert_patches, path_filter=is_py).run_interactive()
+print("\nHINT: Consider running a formatter to correctly format your new assertions!")
