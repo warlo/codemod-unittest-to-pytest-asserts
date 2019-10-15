@@ -45,7 +45,7 @@ def parse_args_and_msg(node, required_args_count):
 def handle_equal(node):
     args, kwarg_list, msg_with_comma = parse_args_and_msg(node, 2)
 
-    if len(args) != 2:
+    if len(args) != 2 or len(kwarg_list) > 0:
         print(f"Potentially malformed: {node}: {astunparse.unparse(node)}\n")
         return
 
@@ -58,10 +58,10 @@ def handle_equal(node):
 
 
 def handle_not_equal(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    args, kwarg_list, msg_with_comma = parse_args_and_msg(node, 2)
 
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+    if len(args) != 2 or len(kwarg_list) > 0:
+        print(f"Potentially malformed: {node}: {astunparse.unparse(node)}\n")
         return
 
     if args[0] in ["True", "False", "None"]:
@@ -73,12 +73,12 @@ def handle_not_equal(node):
 
 
 def handle_contains(node):
-    args, kwargs, msg_with_comma = parse_args_and_msg(node, 2)
-    if not kwargs:
+    args, kwarg_list, msg_with_comma = parse_args_and_msg(node, 2)
+    if not kwarg_list:
         if len(args) <= 2:
-            return f"assert {args[1]} in {args[0]}"
-    kwarg = kwargs[0].split("=")
-    return f'assert {args[1]} in {args[0]} and {args[0]}["{kwarg[0]}"] == {kwarg[1]}'
+            return f"assert {args[1]} in {args[0]}{msg_with_comma}"
+    kwarg = kwarg_list[0].split("=")
+    return f'assert {args[1]} in {args[0]} and {args[0]}["{kwarg[0]}"] == {kwarg[1]}{msg_with_comma}'
 
 
 def handle_true(node):
@@ -248,8 +248,6 @@ def assert_patches(list_of_lines):
 
 
 def is_py(filename):
-    # return filename == './tienda/audit_logs/tests/test_models.py'
-    # return filename == './tienda/campaigns/tests/test_views.py'
     return filename.split(".")[-1] == "py"
 
 
