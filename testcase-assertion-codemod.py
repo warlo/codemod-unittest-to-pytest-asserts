@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import re
 import codemod
@@ -186,8 +186,9 @@ def convert(node):
 
 def dfs_walk(node):
     """
-    Walk along the node in a DFS fashion
+    Walk along the nodes of the AST in a DFS fashion
     """
+
     stack = [node]
     for child in ast.iter_child_nodes(node):
         stack.extend(dfs_walk(child))
