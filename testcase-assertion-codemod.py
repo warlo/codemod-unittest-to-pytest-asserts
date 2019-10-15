@@ -194,6 +194,16 @@ def dfs_walk(node):
     return stack
 
 
+def node_is_function(node):
+    if isinstance(node, ast.Expr):
+        value = node.value
+        if isinstance(value, ast.Call):
+            func = value.func
+            if isinstance(func, ast.Attribute):
+                return True
+    return False
+
+
 def assert_patches(list_of_lines):
     patches = []
     test = ast.parse("".join(list_of_lines))
@@ -201,51 +211,44 @@ def assert_patches(list_of_lines):
     line_deviation = 0
     threshold_line = 0
     for node in dfs_walk(test):
+        if not node_is_function(node):
+            continue
 
-        is_func = False
-        if isinstance(node, ast.Expr):
-            value = node.value
-            if isinstance(value, ast.Call):
-                func = value.func
-                if isinstance(func, ast.Attribute):
-                    is_func = True
+        converted = convert(node)
+        if not converted:
+            continue
 
-        if is_func:
-            converted = convert(node)
-            if converted:
-                assert_line = node.col_offset * " " + converted + "\n"
-                end_line = node.end_lineno
+        assert_line = node.col_offset * " " + converted + "\n"
+        end_line = node.end_lineno
 
-                if node.lineno < threshold_line:
-                    continue
+        if node.lineno < threshold_line:
+            continue
 
-                patches.append(
-                    codemod.Patch(
-                        node.lineno - line_deviation - 1,
-                        end_line_number=end_line - line_deviation,
-                        new_lines=assert_line,
-                    )
+        patches.append(
+            codemod.Patch(
+                node.lineno - line_deviation - 1,
+                end_line_number=end_line - line_deviation,
+                new_lines=assert_line,
+            )
+        )
+
+        comment_line = COMMENT_REGEX.search(
+            list_of_lines[min(end_line - 1, len(list_of_lines) - 1)]
+        )
+        line_deviation += end_line - node.lineno
+
+        if comment_line:
+            comment = comment_line.group(1) + comment_line.group(2).lstrip() + "\n"
+            patches.append(
+                codemod.Patch(
+                    end_line - line_deviation,
+                    end_line_number=end_line - line_deviation,
+                    new_lines=comment,
                 )
+            )
+            line_deviation -= 1
 
-                comment_line = COMMENT_REGEX.search(
-                    list_of_lines[min(end_line - 1, len(list_of_lines) - 1)]
-                )
-                line_deviation += end_line - node.lineno
-
-                if comment_line:
-                    comment = (
-                        comment_line.group(1) + comment_line.group(2).lstrip() + "\n"
-                    )
-                    patches.append(
-                        codemod.Patch(
-                            end_line - line_deviation,
-                            end_line_number=end_line - line_deviation,
-                            new_lines=comment,
-                        )
-                    )
-                    line_deviation -= 1
-
-                threshold_line = end_line
+        threshold_line = end_line
 
     return patches
 
