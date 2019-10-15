@@ -160,13 +160,23 @@ def convert(node):
         return f(node)
 
 
+def dfs_walk(node):
+    """
+    Walk along the node in a DFS fashion
+    """
+    stack = [node]
+    for child in ast.iter_child_nodes(node):
+        stack.extend(walk(child))
+    return stack
+
+
 def assert_patches(list_of_lines):
     patches = []
     test = ast.parse("".join(list_of_lines))
 
     line_deviation = 0
     threshold_line = 0
-    for node in ast.walk(test):
+    for node in dfs_walk(test):
 
         is_func = False
         if isinstance(node, ast.Expr):
