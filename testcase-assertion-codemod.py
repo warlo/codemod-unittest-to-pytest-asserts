@@ -209,7 +209,6 @@ def assert_patches(list_of_lines):
     test = ast.parse("".join(list_of_lines))
 
     line_deviation = 0
-    threshold_line = 0
     for node in dfs_walk(test):
         if not node_is_function(node):
             continue
@@ -220,9 +219,6 @@ def assert_patches(list_of_lines):
 
         assert_line = node.col_offset * " " + converted + "\n"
         end_line = node.end_lineno
-
-        if node.lineno < threshold_line:
-            continue
 
         patches.append(
             codemod.Patch(
@@ -247,8 +243,6 @@ def assert_patches(list_of_lines):
                 )
             )
             line_deviation -= 1
-
-        threshold_line = end_line
 
     return patches
 
