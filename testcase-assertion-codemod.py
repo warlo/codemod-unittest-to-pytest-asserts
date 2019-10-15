@@ -161,9 +161,43 @@ def handle_not_is_instance(node):
     return f"assert not isinstance({args[0]}, {args[1]}){msg_with_comma}"
 
 
+def handle_less(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {args[0]} < {args[1]}{msg_with_comma}"
+
+
+def handle_less_equal(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {args[0]} <= {args[1]}{msg_with_comma}"
+
+
+def handle_greater(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {args[0]} > {args[1]}{msg_with_comma}"
+
+
+def handle_greater_equal(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {args[0]} >= {args[1]}{msg_with_comma}"
+
+
 assert_mapping = {
     "assertEqual": handle_equal,
+    "assertEquals": handle_equal,
     "assertNotEqual": handle_not_equal,
+    "assertNotEquals": handle_not_equal,
     "assertTrue": handle_true,
     "assertFalse": handle_false,
     "assertIn": handle_in,
@@ -174,6 +208,10 @@ assert_mapping = {
     "assertIsNotNone": handle_is_not_none,
     "assertIsInstance": handle_is_instance,
     "assertNotIsInstance": handle_not_is_instance,
+    "assertLess": handle_less,
+    "assertLessEqual": handle_less,
+    "assertGreater": handle_greater,
+    "assertGreaterEqual": handle_greater,
 }
 
 
