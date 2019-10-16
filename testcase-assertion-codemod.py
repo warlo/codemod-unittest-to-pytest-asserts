@@ -193,6 +193,31 @@ def handle_greater_equal(node):
     return f"assert {args[0]} >= {args[1]}{msg_with_comma}"
 
 
+def handle_almost_equal(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert round({args[0]} - {args[1]}, 7) >= 0{msg_with_comma}"
+
+
+def handle_not_almost_equal(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert round({args[0]} - {args[1]}, 7) != 0{msg_with_comma}"
+
+
+def handle_raises(node):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) > 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    if len(args) == 2:
+        return f"pytest.raises({args[0]}, {args[1]}){msg_with_comma}"
+
+
 assert_mapping = {
     "assertEqual": handle_equal,
     "assertEquals": handle_equal,
@@ -211,7 +236,10 @@ assert_mapping = {
     "assertLess": handle_less,
     "assertLessEqual": handle_less,
     "assertGreater": handle_greater,
-    "assertGreaterEqual": handle_greater,
+    "assertGreaterEqual": handle_greater_equal,
+    "assertAlmostEqual": handle_almost_equal,
+    "assertNotAlmostEqual": handle_not_almost_equal,
+    # "assertRaises": handle_raises,
 }
 
 
