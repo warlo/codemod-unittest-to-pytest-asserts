@@ -86,7 +86,7 @@ def handle_true(node):
     if len(args) != 1:
         print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
         return
-    return f"assert {args[0]} is True{msg_with_comma}"
+    return f"assert {args[0]}{msg_with_comma}"
 
 
 def handle_false(node):
@@ -94,7 +94,7 @@ def handle_false(node):
     if len(args) != 1:
         print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
         return
-    return f"assert {args[0]} is False{msg_with_comma}"
+    return f"assert not {args[0]}{msg_with_comma}"
 
 
 def handle_in(node):
