@@ -234,7 +234,7 @@ assert_mapping = {
     "assertIsInstance": handle_is_instance,
     "assertNotIsInstance": handle_not_is_instance,
     "assertLess": handle_less,
-    "assertLessEqual": handle_less,
+    "assertLessEqual": handle_less_equal,
     "assertGreater": handle_greater,
     "assertGreaterEqual": handle_greater_equal,
     "assertAlmostEqual": handle_almost_equal,
