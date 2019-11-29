@@ -22,8 +22,8 @@ class ExampleTest:
                     product__backend_product_id=self.backend_product.id,
                     product_id=self.product.id,
                     name="Julebrus",
-                ),  # Some comment here
-                True,
+                ),
+                True
             )
             self.assertTrue(True)
 
