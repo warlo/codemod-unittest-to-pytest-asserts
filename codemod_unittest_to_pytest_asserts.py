@@ -318,5 +318,10 @@ def is_py(filename):
     return filename.split(".")[-1] == "py"
 
 
-codemod.Query(assert_patches, path_filter=is_py).run_interactive()
-print("\nHINT: Consider running a formatter to correctly format your new assertions!")
+def main():
+    codemod.Query(assert_patches, path_filter=is_py).run_interactive()
+    print("\nHINT: Consider running a formatter to correctly format your new assertions!")
+
+
+if __name__ == '__main__':
+    main()

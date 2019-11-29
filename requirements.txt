@@ -1,2 +1,0 @@
-astunparse==1.6.2
-codemod==1.0.0
