@@ -392,8 +392,7 @@ def is_py(filename):
     Filter method using filename's to select what files to evaluate for codemodding
     """
 
-    return filename == "./test.py"
-    # return filename.split(".")[-1] == "py"
+    return filename.split(".")[-1] == "py"
 
 
 def main():
