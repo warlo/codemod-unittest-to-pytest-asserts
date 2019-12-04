@@ -210,7 +210,7 @@ def handle_not_almost_equal(node):
 
 
 def handle_raises(node, **kwargs):
-    if kwargs.get('withitem'):
+    if kwargs.get("withitem"):
         return handle_with_raises(node)
     args, _ = parse_args(node)
     if len(args) > 2:
@@ -255,6 +255,7 @@ assert_mapping = {
 
 
 def convert(node):
+
     node_call = node_get_call(node)
     f = assert_mapping.get(node_get_func_attr(node_call), None)
     if not f:
@@ -269,7 +270,7 @@ def convert(node):
 
 def dfs_walk(node):
     """
-    Walk along the nodes of the AST in a DFS fashion
+    Walk along the nodes of the AST in a DFS fashion returning the pre-order-tree-traversal
     """
 
     stack = [node]
@@ -280,7 +281,7 @@ def dfs_walk(node):
 
 def node_get_func_attr(node):
     if isinstance(node, ast.Call):
-        return getattr(node.func, 'attr', None)
+        return getattr(node.func, "attr", None)
 
 
 def node_get_call(node):
@@ -293,20 +294,20 @@ def node_get_call(node):
             return value
 
     if isinstance(node, ast.With):
-        value = getattr(node.items[0], "context_expr", None)  # Naively choosing the first item in the with
+        value = getattr(
+            node.items[0], "context_expr", None
+        )  # Naively choosing the first item in the with
         if isinstance(value, ast.Call):
             return value
     return None
 
 
 def get_col_offset(node):
-    if isinstance(node, ast.With):
-        return node.col_offset
-
     return node.col_offset
 
 
 def get_lineno(node):
+    # We generally use `lineno` from the AST node, but special case for `With` expressions
     if isinstance(node, ast.With):
         return node.items[0].context_expr.lineno
 
@@ -314,6 +315,7 @@ def get_lineno(node):
 
 
 def get_end_lineno(node):
+    # We generally use `end_lineno` directly from the AST node, but special case for `With` expressions
     if isinstance(node, ast.With):
         return node.items[0].context_expr.end_lineno
 
@@ -321,14 +323,24 @@ def get_end_lineno(node):
 
 
 def assert_patches(list_of_lines):
-    patches = []
-    joined_lines = ''.join(list_of_lines)
-    test = ast.parse(joined_lines)
+    """
+    Main method where we get the list of lines from codemod.
+    1. Parses it with AST
+    2. Traverses the AST in a pre-order-tree traversal
+    3. Grab the Call values we are interested in e.g. `assertEqual()`
+    4. Try executing `convert` on the Call node or continue
+    5. Construct a codemod.Patch for the conversion and replace start->end lines with the conversion
+    6. Handle special cases with importing pytest if it used and not imported, and append comment if it exists.
+    """
 
-    pytest_imported = 'import pytest' in joined_lines
+    patches = []
+    joined_lines = "".join(list_of_lines)
+    ast_parsed = ast.parse(joined_lines)
+
+    pytest_imported = "import pytest" in joined_lines
 
     line_deviation = 0
-    for node in dfs_walk(test):
+    for node in dfs_walk(ast_parsed):
         if not node_get_call(node):
             continue
 
@@ -348,14 +360,10 @@ def assert_patches(list_of_lines):
             )
         )
 
-        requires_import = 'pytest.' in assert_line
+        requires_import = "pytest." in assert_line
         if requires_import and not pytest_imported:
             patches.append(
-                codemod.Patch(
-                    0,
-                    end_line_number=0,
-                    new_lines="import pytest\n",
-                )
+                codemod.Patch(0, end_line_number=0, new_lines="import pytest\n",)
             )
             line_deviation -= 1
             pytest_imported = True
@@ -380,13 +388,20 @@ def assert_patches(list_of_lines):
 
 
 def is_py(filename):
-    return filename.split(".")[-1] == "py"
+    """
+    Filter method using filename's to select what files to evaluate for codemodding
+    """
+
+    return filename == "./test.py"
+    # return filename.split(".")[-1] == "py"
 
 
 def main():
     codemod.Query(assert_patches, path_filter=is_py).run_interactive()
-    print("\nHINT: Consider running a formatter to correctly format your new assertions!")
+    print(
+        "\nHINT: Consider running a formatter to correctly format your new assertions!"
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
