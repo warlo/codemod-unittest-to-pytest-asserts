@@ -23,9 +23,13 @@ With pipx, assuming Python 3.8 exists on the system::
 Usage
 =====
 
-Run the installed command on the Python files you want to refactor::
+Run the installed command on the Python files or directory of files you want to refactor::
 
    codemod-unittest-to-pytest-asserts some-python-files.py
+
+or::
+
+   codemod-unittest-to-pytest-asserts some_directory/
 
 You'll be asked to confirm all changes.
 

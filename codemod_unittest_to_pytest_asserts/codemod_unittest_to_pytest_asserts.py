@@ -17,9 +17,9 @@ def parse_args(node):
     args = []
     kwarg_list = []
 
-    for arg in node.value.args:
+    for arg in node.args:
         args.append(astunparse.unparse(arg).replace("\n", ""))
-    for kwarg in node.value.keywords:
+    for kwarg in node.keywords:
         kwarg_list.append(astunparse.unparse(kwarg).replace("\n", ""))
 
     return args, kwarg_list
@@ -209,13 +209,24 @@ def handle_not_almost_equal(node):
     return f"assert round({args[0]} - {args[1]}, 7) != 0{msg_with_comma}"
 
 
-def handle_raises(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+def handle_raises(node, **kwargs):
+    if kwargs.get("withitem"):
+        return handle_with_raises(node)
+    args, _ = parse_args(node)
     if len(args) > 2:
         print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
         return
     if len(args) == 2:
-        return f"pytest.raises({args[0]}, {args[1]}){msg_with_comma}"
+        return f"pytest.raises({args[0]}, {args[1]})"
+
+
+def handle_with_raises(node):
+    args, _ = parse_args(node)
+    if len(args) > 1:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    if len(args) == 1:
+        return f"with pytest.raises({args[0]}):"
 
 
 assert_mapping = {
@@ -239,20 +250,27 @@ assert_mapping = {
     "assertGreaterEqual": handle_greater_equal,
     "assertAlmostEqual": handle_almost_equal,
     "assertNotAlmostEqual": handle_not_almost_equal,
-    # "assertRaises": handle_raises,
+    "assertRaises": handle_raises,
 }
 
 
 def convert(node):
-    method = node.value.func.attr
-    f = assert_mapping.get(method, None)
-    if f:
-        return f(node)
+
+    node_call = node_get_call(node)
+    f = assert_mapping.get(node_get_func_attr(node_call), None)
+    if not f:
+        return None
+
+    if hasattr(node, "value") and isinstance(node.value, ast.Call):
+        return f(node.value)
+    if isinstance(node, ast.With) and isinstance(node_call, ast.Call):
+        return f(node_call, withitem=True)
+    return None
 
 
 def dfs_walk(node):
     """
-    Walk along the nodes of the AST in a DFS fashion
+    Walk along the nodes of the AST in a DFS fashion returning the pre-order-tree-traversal
     """
 
     stack = [node]
@@ -261,44 +279,99 @@ def dfs_walk(node):
     return stack
 
 
-def node_is_function(node):
+def node_get_func_attr(node):
+    if isinstance(node, ast.Call):
+        return getattr(node.func, "attr", None)
+
+
+def node_get_call(node):
+    if not (isinstance(node, ast.Expr) or isinstance(node, ast.With)):
+        return False
+
     if isinstance(node, ast.Expr):
-        value = node.value
+        value = getattr(node, "value", None)
         if isinstance(value, ast.Call):
-            func = value.func
-            if isinstance(func, ast.Attribute):
-                return True
-    return False
+            return value
+
+    if isinstance(node, ast.With):
+        value = getattr(
+            node.items[0], "context_expr", None
+        )  # Naively choosing the first item in the with
+        if isinstance(value, ast.Call):
+            return value
+    return None
+
+
+def get_col_offset(node):
+    return node.col_offset
+
+
+def get_lineno(node):
+    # We generally use `lineno` from the AST node, but special case for `With` expressions
+    if isinstance(node, ast.With):
+        return node.items[0].context_expr.lineno
+
+    return node.lineno
+
+
+def get_end_lineno(node):
+    # We generally use `end_lineno` directly from the AST node, but special case for `With` expressions
+    if isinstance(node, ast.With):
+        return node.items[0].context_expr.end_lineno
+
+    return node.end_lineno
 
 
 def assert_patches(list_of_lines):
+    """
+    Main method where we get the list of lines from codemod.
+    1. Parses it with AST
+    2. Traverses the AST in a pre-order-tree traversal
+    3. Grab the Call values we are interested in e.g. `assertEqual()`
+    4. Try executing `convert` on the Call node or continue
+    5. Construct a codemod.Patch for the conversion and replace start->end lines with the conversion
+    6. Handle special cases with importing pytest if it used and not imported, and append comment if it exists.
+    """
+
     patches = []
-    test = ast.parse("".join(list_of_lines))
+    joined_lines = "".join(list_of_lines)
+    ast_parsed = ast.parse(joined_lines)
+
+    pytest_imported = "import pytest" in joined_lines
 
     line_deviation = 0
-    for node in dfs_walk(test):
-        if not node_is_function(node):
+    for node in dfs_walk(ast_parsed):
+        if not node_get_call(node):
             continue
 
         converted = convert(node)
         if not converted:
             continue
 
-        assert_line = node.col_offset * " " + converted + "\n"
-        end_line = node.end_lineno
+        assert_line = get_col_offset(node) * " " + converted + "\n"
+        start_line = get_lineno(node)
+        end_line = get_end_lineno(node)
 
         patches.append(
             codemod.Patch(
-                node.lineno - line_deviation - 1,
+                start_line - line_deviation - 1,
                 end_line_number=end_line - line_deviation,
                 new_lines=assert_line,
             )
         )
 
+        requires_import = "pytest." in assert_line
+        if requires_import and not pytest_imported:
+            patches.append(
+                codemod.Patch(0, end_line_number=0, new_lines="import pytest\n",)
+            )
+            line_deviation -= 1
+            pytest_imported = True
+
         comment_line = COMMENT_REGEX.search(
             list_of_lines[min(end_line - 1, len(list_of_lines) - 1)]
         )
-        line_deviation += end_line - node.lineno
+        line_deviation += end_line - start_line
 
         if comment_line:
             comment = comment_line.group(1) + comment_line.group(2).lstrip() + "\n"
@@ -315,13 +388,19 @@ def assert_patches(list_of_lines):
 
 
 def is_py(filename):
+    """
+    Filter method using filename's to select what files to evaluate for codemodding
+    """
+
     return filename.split(".")[-1] == "py"
 
 
 def main():
     codemod.Query(assert_patches, path_filter=is_py).run_interactive()
-    print("\nHINT: Consider running a formatter to correctly format your new assertions!")
+    print(
+        "\nHINT: Consider running a formatter to correctly format your new assertions!"
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
