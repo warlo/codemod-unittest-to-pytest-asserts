@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import sys
-import re
-import codemod
 import ast
-import astunparse
+import re
+import sys
 
+import astunparse
+import codemod
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 8:
     print("This script requires Python version >3.8")
@@ -261,11 +261,9 @@ def convert(node):
     if not f:
         return None
 
-    if hasattr(node, "value") and isinstance(node.value, ast.Call):
-        return f(node.value)
-    if isinstance(node, ast.With) and isinstance(node_call, ast.Call):
+    if isinstance(node, ast.With):
         return f(node_call, withitem=True)
-    return None
+    return f(node_call)
 
 
 def dfs_walk(node):
