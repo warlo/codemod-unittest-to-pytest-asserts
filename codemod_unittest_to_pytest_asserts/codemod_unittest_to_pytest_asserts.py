@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import sys
-import re
-import codemod
 import ast
-import astunparse
+import re
+import sys
 
+import astunparse
+import codemod
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 8:
     print("This script requires Python version >3.8")

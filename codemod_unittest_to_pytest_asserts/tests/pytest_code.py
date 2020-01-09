@@ -23,4 +23,3 @@ class ExampleTest:
             assert True
 
         assert not False
-
