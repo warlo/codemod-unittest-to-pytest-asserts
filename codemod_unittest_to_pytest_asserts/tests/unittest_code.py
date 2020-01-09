@@ -28,4 +28,3 @@ class ExampleTest:
             self.assertTrue(True)
 
         self.assertFalse(False)
-
