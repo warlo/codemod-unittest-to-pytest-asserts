@@ -3,7 +3,7 @@ import shutil
 
 import codemod
 
-from ..codemod_unittest_to_pytest_asserts import *
+from codemod_unittest_to_pytest_asserts import *
 
 UNITTEST_TEMPLATE = "./unittest_code_template.py"
 UNITTEST_FILE = "unittest_code.py"
