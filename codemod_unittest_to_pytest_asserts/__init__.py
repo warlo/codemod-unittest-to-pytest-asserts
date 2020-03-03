@@ -234,6 +234,7 @@ assert_mapping = {
     "assertEquals": handle_equal,
     "assertNotEqual": handle_not_equal,
     "assertNotEquals": handle_not_equal,
+    "assert_": handle_true,
     "assertTrue": handle_true,
     "assertFalse": handle_false,
     "assertIn": handle_in,
