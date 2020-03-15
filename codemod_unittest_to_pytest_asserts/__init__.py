@@ -362,7 +362,7 @@ def assert_patches(list_of_lines):
         requires_import = "pytest." in assert_line
         if requires_import and not pytest_imported:
             patches.append(
-                codemod.Patch(0, end_line_number=0, new_lines="import pytest\n",)
+                codemod.Patch(0, end_line_number=0, new_lines="import pytest\n")
             )
             line_deviation -= 1
             pytest_imported = True
@@ -395,7 +395,14 @@ def is_py(filename):
 
 
 def main():
-    codemod.Query(assert_patches, path_filter=is_py).run_interactive()
+    try:
+        path = sys.argv[1]
+    except IndexError:
+        path = "."
+
+    codemod.Query(
+        assert_patches, path_filter=is_py, root_directory=path
+    ).run_interactive()
     print(
         "\nHINT: Consider running a formatter to correctly format your new assertions!"
     )
