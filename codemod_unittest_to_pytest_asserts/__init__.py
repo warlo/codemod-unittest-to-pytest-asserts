@@ -211,7 +211,7 @@ def handle_not_almost_equal(node):
 
 def handle_raises(node, **kwargs):
     if kwargs.get("withitem"):
-        return handle_with_raises(node)
+        return handle_with_raises(node, **kwargs)
     args, _ = parse_args(node)
     if len(args) > 2:
         print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
@@ -220,13 +220,16 @@ def handle_raises(node, **kwargs):
         return f"pytest.raises({args[0]}, {args[1]})"
 
 
-def handle_with_raises(node):
+def handle_with_raises(node, **kwargs):
     args, _ = parse_args(node)
+    optional_vars = kwargs.get('optional_vars', None)
     if len(args) > 1:
         print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
         return
-    if len(args) == 1:
-        return f"with pytest.raises({args[0]}):"
+
+    if optional_vars:
+        return f"with pytest.raises({args[0]}) as {optional_vars.id}:"
+    return f"with pytest.raises({args[0]}):"
 
 
 assert_mapping = {
@@ -263,7 +266,7 @@ def convert(node):
         return None
 
     if isinstance(node, ast.With):
-        return f(node_call, withitem=True)
+        return f(node_call, withitem=True, optional_vars=node.items[0].optional_vars)
     return f(node_call)
 
 
