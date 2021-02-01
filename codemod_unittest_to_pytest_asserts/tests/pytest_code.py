@@ -23,3 +23,8 @@ class ExampleTest:
             assert True
 
         assert not False
+
+    def test_assert_raises(self):
+        with pytest.raises(ZeroDivisionError) as exc:
+            divide_by_zero = 3 / 0
+        assert exc.exception.args[0] == 'division by zero'

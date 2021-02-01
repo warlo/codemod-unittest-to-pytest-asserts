@@ -28,3 +28,8 @@ class ExampleTest:
             self.assertTrue(True)
 
         self.assertFalse(False)
+
+    def test_assert_raises(self):
+        with self.assertRaises(ZeroDivisionError) as exc:
+            divide_by_zero = 3 / 0
+        self.assertEqual(exc.exception.args[0], 'division by zero')
