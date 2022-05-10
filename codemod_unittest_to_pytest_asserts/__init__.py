@@ -210,7 +210,6 @@ assert_mapping = {
 
 
 def convert(node):
-
     node_call = node_get_call(node)
     f = assert_mapping.get(node_get_func_attr(node_call), None)
     if not f:
