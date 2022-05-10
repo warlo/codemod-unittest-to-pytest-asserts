@@ -6,6 +6,8 @@ import sys
 import astunparse
 import codemod
 
+TRUE_FALSE_NONE = {"True", "False", "None"}
+
 if sys.version_info[0] != 3 or sys.version_info[1] < 8:
     print("This script requires Python version >3.8")
     sys.exit(1)
@@ -42,34 +44,59 @@ def parse_args_and_msg(node, required_args_count):
     return args, kwarg_list, f", {msg}" if msg else ""
 
 
-def handle_equal(node):
+def _handle_equal_or_unequal(node, *, is_op, cmp_op):
     args, kwarg_list, msg_with_comma = parse_args_and_msg(node, 2)
 
     if len(args) != 2 or len(kwarg_list) > 0:
         print(f"Potentially malformed: {node}: {astunparse.unparse(node)}\n")
         return
 
-    if args[0] in ["True", "False", "None"]:
-        return f"assert {args[1]} is {args[0]}{msg_with_comma}"
-    if args[1] in ["True", "False", "None"]:
-        return f"assert {args[0]} is {args[1]}{msg_with_comma}"
+    if args[0] in TRUE_FALSE_NONE:
+        return f"assert {args[1]} {is_op} {args[0]}{msg_with_comma}"
+    if args[1] in TRUE_FALSE_NONE:
+        return f"assert {args[0]} {is_op} {args[1]}{msg_with_comma}"
 
-    return f"assert {args[0]} == {args[1]}{msg_with_comma}"
+    return f"assert {args[0]} {cmp_op} {args[1]}{msg_with_comma}"
+
+
+def _handle_prefix_or_suffix(node, *, prefix="", suffix=""):
+    args, _, msg_with_comma = parse_args_and_msg(node, 1)
+    if len(args) != 1:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {prefix}{args[0]}{suffix}{msg_with_comma}"
+
+
+def _handle_generic_binary(node, *, op):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {args[0]} {op} {args[1]}{msg_with_comma}"
+
+
+def _handle_generic_call(node, *, func):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert {func}({args[0]}, {args[1]}){msg_with_comma}"
+
+
+def _handle_almost_equal(node, *, op):
+    args, _, msg_with_comma = parse_args_and_msg(node, 2)
+    if len(args) != 2:
+        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
+        return
+    return f"assert round({args[0]} - {args[1]}, 7) {op} 0{msg_with_comma}"
+
+
+def handle_equal(node):
+    return _handle_equal_or_unequal(node, is_op="is", cmp_op="==")
 
 
 def handle_not_equal(node):
-    args, kwarg_list, msg_with_comma = parse_args_and_msg(node, 2)
-
-    if len(args) != 2 or len(kwarg_list) > 0:
-        print(f"Potentially malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-
-    if args[0] in ["True", "False", "None"]:
-        return f"assert {args[1]} is not {args[0]}{msg_with_comma}"
-    if args[1] in ["True", "False", "None"]:
-        return f"assert {args[0]} is not {args[1]}{msg_with_comma}"
-
-    return f"assert {args[0]} != {args[1]}{msg_with_comma}"
+    return _handle_equal_or_unequal(node, is_op="is not", cmp_op="!=")
 
 
 def handle_contains(node):
@@ -82,131 +109,67 @@ def handle_contains(node):
 
 
 def handle_true(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 1)
-    if len(args) != 1:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]}{msg_with_comma}"
+    return _handle_prefix_or_suffix(node, prefix="")
 
 
 def handle_false(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 1)
-    if len(args) != 1:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert not {args[0]}{msg_with_comma}"
+    return _handle_prefix_or_suffix(node, prefix="not ")
 
 
 def handle_in(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} in {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op="in")
 
 
 def handle_not_in(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} not in {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op="not in")
 
 
 def handle_is(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} is {args[1]}{msg_with_comma}"
-
-
-def handle_is_none(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 1)
-    if len(args) != 1:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} is None{msg_with_comma}"
+    return _handle_generic_binary(node, op="is")
 
 
 def handle_is_not(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} is not {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op="is not")
+
+
+def handle_is_none(node):
+    return _handle_prefix_or_suffix(node, suffix=" is None")
 
 
 def handle_is_not_none(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 1)
-    if len(args) != 1:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} is not None{msg_with_comma}"
+    return _handle_prefix_or_suffix(node, suffix=" is not None")
 
 
 def handle_is_instance(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert isinstance({args[0]}, {args[1]}){msg_with_comma}"
+    return _handle_generic_call(node, func="isinstance")
 
 
 def handle_not_is_instance(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert not isinstance({args[0]}, {args[1]}){msg_with_comma}"
+    return _handle_generic_call(node, func="not isinstance")
 
 
 def handle_less(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} < {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op="<")
 
 
 def handle_less_equal(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} <= {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op="<=")
 
 
 def handle_greater(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} > {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op=">")
 
 
 def handle_greater_equal(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert {args[0]} >= {args[1]}{msg_with_comma}"
+    return _handle_generic_binary(node, op=">=")
 
 
 def handle_almost_equal(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert round({args[0]} - {args[1]}, 7) >= 0{msg_with_comma}"
+    return _handle_almost_equal(node, op=">=")
 
 
 def handle_not_almost_equal(node):
-    args, _, msg_with_comma = parse_args_and_msg(node, 2)
-    if len(args) != 2:
-        print(f"Malformed: {node}: {astunparse.unparse(node)}\n")
-        return
-    return f"assert round({args[0]} - {args[1]}, 7) != 0{msg_with_comma}"
+    return _handle_almost_equal(node, op="!=")
 
 
 def handle_raises(node, **kwargs):
