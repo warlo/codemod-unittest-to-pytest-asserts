@@ -89,15 +89,6 @@ def handle_not_equal(node):
     return _handle_equal_or_unequal(node, is_op="is not", cmp_op="!=")
 
 
-def handle_contains(node):
-    args, kwarg_list, msg_with_comma = parse_args_and_msg(node, 2)
-    if not kwarg_list:
-        if len(args) <= 2:
-            return f"assert {args[1]} in {args[0]}{msg_with_comma}"
-    kwarg = kwarg_list[0].split("=")
-    return f'assert {args[1]} in {args[0]} and {args[0]}["{kwarg[0]}"] == {kwarg[1]}{msg_with_comma}'
-
-
 def handle_true(node):
     return _handle_prefix_or_suffix(node, prefix="")
 
