@@ -48,3 +48,7 @@ class ExampleTest:
         assert 2 <= 2
         assert 3 > 2
         assert 4 >= 3
+
+    def test_de_yoda(self):
+        foo = "baz"
+        assert foo == 'bar'

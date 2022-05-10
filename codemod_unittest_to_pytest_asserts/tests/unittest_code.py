@@ -53,3 +53,7 @@ class ExampleTest:
         self.assertLessEqual(2, 2)
         self.assertGreater(3, 2)
         self.assertGreaterEqual(4, 3)
+
+    def test_de_yoda(self):
+        foo = "baz"
+        self.assertEqual('bar', foo)
