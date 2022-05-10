@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 import ast
 import re
-import sys
 
 import astunparse
 import codemod
 
 TRUE_FALSE_NONE = {"True", "False", "None"}
-
-if sys.version_info[0] != 3 or sys.version_info[1] < 8:
-    print("This script requires Python version >3.8")
-    sys.exit(1)
 
 COMMENT_REGEX = re.compile(r"(\s*).*\)(\s*\#.*)")
 
@@ -358,6 +353,10 @@ def is_py(filename):
 
 
 def main():
+    import sys
+    if sys.version_info < (3, 8):
+        raise RuntimeError("This script requires Python version >=3.8")
+
     try:
         path = sys.argv[1]
     except IndexError:
