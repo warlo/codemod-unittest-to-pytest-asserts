@@ -1,6 +1,5 @@
-
-test:
-	python -m codemod_unittest_to_pytest_asserts.tests.test_codemod
+test_codemod:
+	py.test
 
 build:
 	python setup.py sdist bdist_wheel

@@ -33,3 +33,23 @@ class ExampleTest:
         with self.assertRaises(ZeroDivisionError) as exc:
             divide_by_zero = 3 / 0
         self.assertEqual(exc.exception.args[0], 'division by zero')
+
+    def test_assert_raises_legacy(self):
+        def foo():
+            raise ValueError("bar")
+        self.assertRaises(ValueError, foo)
+
+    def test_various_ops(self):
+        self.assertIn("a", "abc")
+        self.assertNotIn("a", "def")
+        self.assertNotEqual(1, 2)
+        self.assertIs(None, None)
+        self.assertIsNot(True, False)
+        self.assertIsNone(None)
+        self.assertIsNotNone(True)
+        self.assertIsInstance(1, int)
+        self.assertNotIsInstance(1, str)
+        self.assertLess(1, 2)
+        self.assertLessEqual(2, 2)
+        self.assertGreater(3, 2)
+        self.assertGreaterEqual(4, 3)

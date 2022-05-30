@@ -3,37 +3,24 @@ import shutil
 
 import codemod
 
-from codemod_unittest_to_pytest_asserts import *
+from codemod_unittest_to_pytest_asserts import assert_patches, is_py
 
-UNITTEST_TEMPLATE = "./unittest_code_template.py"
-UNITTEST_FILE = "unittest_code.py"
-PYTEST_FILE = "./pytest_code.py"
 DIRNAME = pathlib.Path(__file__).parent
 
+UNITTEST_FILE = DIRNAME / "unittest_code.py"
+PYTEST_FILE = DIRNAME / "pytest_code.py"
 
-def test():
 
-    unittest_code = (DIRNAME / UNITTEST_FILE).read_text()
-
-    codemod.Query(
+def test_codemod(tmp_path):
+    victim = tmp_path / "victim.py"
+    shutil.copy(UNITTEST_FILE, victim)
+    for patch in codemod.Query(
         assert_patches,
-        path_filter=lambda x: x
-        == "./" + str((pathlib.PurePath(DIRNAME).relative_to(pathlib.Path.cwd()) / UNITTEST_FILE)),
-    ).run_interactive()
+        root_directory=tmp_path,
+        path_filter=is_py,
+    ).generate_patches():
+        lines = list(open(patch.path))
+        patch.apply_to(lines)
+        pathlib.Path(patch.path).write_text("".join(lines))
 
-    assert (
-        (DIRNAME / UNITTEST_FILE).read_text()
-        == (DIRNAME / PYTEST_FILE).read_text()
-    )
-    assert (
-        (DIRNAME / UNITTEST_FILE).read_text()
-        != (DIRNAME / UNITTEST_TEMPLATE).read_text()
-    )
-    print("Tests passed!")
-
-    # Overwrite the unittest file from the template again to avoid git
-    open((DIRNAME / UNITTEST_FILE), "w").write(unittest_code)
-
-
-if __name__ == "__main__":
-    test()
+    assert victim.read_text() == (DIRNAME / PYTEST_FILE).read_text()
