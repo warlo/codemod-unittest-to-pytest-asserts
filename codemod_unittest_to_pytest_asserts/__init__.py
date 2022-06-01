@@ -58,6 +58,10 @@ def _handle_equal_or_unequal(node, *, is_op, cmp_op):
     if args[1] in TRUE_FALSE_NONE:
         return f"assert {args[0]} {is_op} {args[1]}{msg_with_comma}"
 
+    # De-yoda expressions like assertEqual("foo", bar) to bar == "foo"
+    if node.args[0].__class__ == ast.Constant and node.args[1].__class__ != ast.Constant:
+        args = [args[1], args[0]]
+
     return f"assert {args[0]} {cmp_op} {args[1]}{msg_with_comma}"
 
 
