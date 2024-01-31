@@ -32,7 +32,7 @@ def parse_args_and_msg(node, required_args_count, *, raise_if_malformed=True):
     msg = ""
 
     for i, kwarg in enumerate(kwarg_list):
-        key, val = kwarg.split("=")
+        key, val = kwarg.split("=", 1)
         if key == "msg":
             msg = val
             kwarg_list.pop(i)
